@@ -86,7 +86,7 @@ local function build_index_names(docs)
   return docs
 end
 
-function _M.insert(self, docs)
+function _M.insert(self, docs, custom_params)
   -- ensure we have oids
   if #docs == 0 then
     local newdocs = {}
@@ -103,13 +103,18 @@ function _M.insert(self, docs)
     self._db:insert(self:full_name(), docs)
     return self:_check_last_error(ids)
   else
+    local params = {
+      ordered = true,
+      writeConcern = self:_build_write_concern()
+    }
+    for k, v in pairs(custom_params or {}) do
+      params[k] = v
+    end
+    params['documents'] = docs
+
     local doc, err = self._db:cmd(
       { insert = self.name },
-      {
-        documents = docs,
-        ordered = true,
-        writeConcern = self:_build_write_concern()
-      }
+      params
     )
 
     if not doc then
